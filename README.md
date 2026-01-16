@@ -15,7 +15,7 @@ This project requires **Go 1.16 or newer** (for the `embed` package).
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/YourUsername/pc-power-link.git](https://github.com/YourUsername/pc-power-link.git)
+    git clone [https://github.com/YourUsername/pc-power-link.git](https://github.com/nibilXD/pc-power-link.git)
     cd pc-power-link
     ```
 
