@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PC Power Link</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script>
+    tailwind.config = {
+        darkMode: 'class',
+    }
+</script>
+<style>
+    /* --- UTILITIES --- */
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        -webkit-tap-highlight-color: transparent;
+        transition: background-color 0.3s, color 0.3s;
+    }
+
+    /* Button Press Effect */
+    .btn-press:active {
+        transform: scale(0.95);
+        opacity: 0.9;
+    }
+
+    /* Big Lock Button Animation */
+    .lock-pulse {
+        animation: pulse-ring 3s infinite;
+    }
+    @keyframes pulse-ring {
+        0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+        70% { box-shadow: 0 0 0 20px rgba(59, 130, 246, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+    }
+
+    /* Dark Mode Transitions */
+    .dark-transition {
+        transition: all 0.3s ease;
+    }
+    
+    /* Desktop Hover Effects */
+    .desktop-card-hover {
+        transition: all 0.3s ease;
+    }
+    .desktop-card-hover:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+    
+    /* Loading Spinner */
+    .spinner {
+        border: 4px solid rgba(0, 0, 0, 0.1);
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border-left-color: #3b82f6;
+        animation: spin 1s ease-in-out infinite;
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+</head>
+
+<body class="w-full min-h-screen bg-white text-gray-900 dark:bg-gray-900 dark:text-white transition-colors duration-300">
+
+    <div id="loading-screen" class="fixed inset-0 z-[60] bg-white dark:bg-gray-900 flex flex-col items-center justify-center transition-opacity duration-300">
+        <div class="spinner mb-4"></div>
+        <p class="text-gray-500 text-sm font-medium">Connecting...</p>
+    </div>
+
+    <div id="login-screen" class="hidden fixed inset-0 z-50 bg-white dark:bg-gray-900 flex flex-col items-center justify-center p-8 transition-all duration-500">
+        <div class="w-full max-w-xs space-y-8 p-8">
+            <div class="text-center space-y-2">
+                <div class="w-20 h-20 bg-blue-600 rounded-3xl mx-auto flex items-center justify-center shadow-lg shadow-blue-500/30 mb-6">
+                    <i class="fas fa-bolt text-4xl text-white"></i>
+                </div>
+                <h1 class="text-2xl font-bold dark:text-white text-gray-900">PC Power Link</h1>
+                <p class="text-gray-500 dark:text-gray-400 text-sm">Secure Remote Access</p>
+            </div>
+
+            <div class="space-y-4">
+                <input id="login-password" type="password" 
+                       class="w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white px-5 py-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-center text-lg placeholder-gray-400"
+                       placeholder="Enter Passcode">
+                
+                <p id="login-error" class="text-red-500 text-xs hidden text-center font-medium">Incorrect password</p>
+                
+                <button onclick="attemptLogin()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-blue-600/20 btn-press text-lg">
+                    Connect
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-content" class="hidden w-full min-h-screen flex flex-col transition-opacity duration-300">
+        
+        <div class="lg:hidden flex-1 flex flex-col p-6">
+            
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h2 class="font-bold text-xl">My PC</h2>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 device-info-display">Connected</p>
+                </div>
+                <button onclick="toggleDarkMode()" class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-yellow-400 transition-colors">
+                    <i id="dark-mode-icon" class="fas fa-moon"></i>
+                </button>
+            </div>
+
+            <div class="flex-1 flex flex-col items-center justify-center mb-8">
+                <button onclick="sendAction('lock')" class="relative group w-48 h-48 rounded-full bg-blue-50 dark:bg-blue-900/20 flex flex-col items-center justify-center btn-press transition-all duration-300 border-4 border-blue-100 dark:border-blue-500/30 lock-pulse">
+                    <svg class="w-20 h-20 text-blue-600 dark:text-blue-400 mb-2 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                    </svg>
+                    <span class="text-blue-600 dark:text-blue-400 font-bold text-lg tracking-wide uppercase">Lock</span>
+                </button>
+                <p class="mt-6 text-gray-400 text-sm font-medium">Tap to Secure</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <button onclick="sendAction('restart')" class="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 py-5 px-6 rounded-2xl flex flex-col items-center gap-2 btn-press transition-colors">
+                    <i class="fas fa-rotate text-2xl mb-1"></i>
+                    <span class="font-bold text-sm">Restart</span>
+                </button>
+                
+                <button onclick="confirmShutdown()" class="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 py-5 px-6 rounded-2xl flex flex-col items-center gap-2 btn-press transition-colors">
+                    <i class="fas fa-power-off text-2xl mb-1"></i>
+                    <span class="font-bold text-sm">Shutdown</span>
+                </button>
+            </div>
+
+            <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 text-center mb-2">
+                <p class="text-xs font-mono text-gray-500 dark:text-gray-400 status-display">Status: Ready</p>
+            </div>
+            
+            <button id="logout-btn-mobile" onclick="logout()" class="text-xs text-gray-400 dark:text-gray-600 py-2 hidden">
+                Disconnect Session
+            </button>
+        </div>
+
+        <div class="hidden lg:flex w-full h-screen bg-gray-900 text-white flex-col p-8 items-center justify-center relative">
+            
+            <header class="w-full max-w-5xl flex justify-between items-center mb-12">
+                <div>
+                    <h1 class="text-3xl font-bold tracking-tight">Control Center</h1>
+                    <div class="flex items-center gap-2 mt-2">
+                        <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                        <p class="text-gray-400 text-sm device-info-display">Connected to Workstation</p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <button id="logout-btn-desktop" onclick="logout()" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm transition-colors border border-gray-700 hidden">
+                        <i class="fas fa-sign-out-alt mr-2"></i> Disconnect
+                    </button>
+                </div>
+            </header>
+
+            <main class="w-full max-w-5xl grid grid-cols-3 gap-8">
+                <button onclick="sendAction('lock')" class="group bg-gray-800 border border-gray-700 h-64 rounded-3xl flex flex-col items-center justify-center gap-6 hover:bg-gray-700 transition-all desktop-card-hover shadow-xl">
+                    <div class="w-20 h-20 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+                        <i class="fas fa-lock"></i>
+                    </div>
+                    <div class="text-center">
+                        <span class="block text-2xl font-bold text-white">Lock PC</span>
+                        <span class="text-sm text-gray-400 mt-1">Secure session</span>
+                    </div>
+                </button>
+
+                <button onclick="sendAction('restart')" class="group bg-gray-800 border border-gray-700 h-64 rounded-3xl flex flex-col items-center justify-center gap-6 hover:bg-gray-700 transition-all desktop-card-hover shadow-xl">
+                    <div class="w-20 h-20 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+                        <i class="fas fa-rotate"></i>
+                    </div>
+                    <div class="text-center">
+                        <span class="block text-2xl font-bold text-white">Restart</span>
+                        <span class="text-sm text-gray-400 mt-1">Reboot system</span>
+                    </div>
+                </button>
+
+                <button onclick="confirmShutdown()" class="group bg-red-900/20 border border-red-800/50 h-64 rounded-3xl flex flex-col items-center justify-center gap-6 hover:bg-red-900/30 transition-all desktop-card-hover shadow-xl">
+                    <div class="w-20 h-20 rounded-2xl bg-red-500/20 text-red-500 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+                        <i class="fas fa-power-off"></i>
+                    </div>
+                    <div class="text-center">
+                        <span class="block text-2xl font-bold text-red-400">Shutdown</span>
+                        <span class="text-sm text-red-400/60 mt-1">Power off completely</span>
+                    </div>
+                </button>
+            </main>
+
+            <div class="mt-12 text-center status-display text-gray-500 font-mono text-sm">
+                Status: Ready
+            </div>
+        </div>
+
+    </div>
+
+<script>
+// --- State Management ---
+let storedPassword = localStorage.getItem('pc_power_link_pw') || '';
+let isDarkMode = localStorage.getItem('pc_power_link_dark') === 'true';
+let authRequired = true; // Default to safe state
+
+// --- Initialization ---
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize Theme
+    if (isDarkMode) {
+        document.documentElement.classList.add('dark');
+        updateThemeIcon(true);
+    }
+    
+    // Setup Password Field
+    if (storedPassword) {
+        document.getElementById('login-password').value = storedPassword;
+    }
+    
+    document.getElementById('login-password').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') attemptLogin();
+    });
+
+    // STARTUP LOGIC:
+    // 1. Show loading spinner
+    // 2. Fetch server info to check if password is required
+    checkServerConfig();
+});
+
+// --- Core Logic ---
+
+async function checkServerConfig() {
+    // Hit the info endpoint to see if auth is required
+    const result = await api("/api/info");
+    
+    // Hide loading screen
+    document.getElementById('loading-screen').classList.add('opacity-0', 'pointer-events-none');
+    setTimeout(() => { document.getElementById('loading-screen').style.display = 'none'; }, 300);
+
+    if (result.success && result.data) {
+        // Update device name
+        updateTextByClass('device-info-display', result.data.device || "PC Power Link");
+        
+        // CHECK: Is Auth Required?
+        authRequired = result.data.auth_required;
+        
+        if (authRequired) {
+            // YES: Show Logout buttons
+            document.getElementById('logout-btn-mobile').classList.remove('hidden');
+            document.getElementById('logout-btn-desktop').classList.remove('hidden');
+
+            // Do we have a stored password?
+            if (storedPassword) {
+                // Try to "auto-login" (just show app, real auth happens on action)
+                showApp();
+            } else {
+                // No password stored, show login screen
+                showLogin();
+            }
+        } else {
+            // NO: Hide Logout buttons (useless)
+            document.getElementById('logout-btn-mobile').classList.add('hidden');
+            document.getElementById('logout-btn-desktop').classList.add('hidden');
+            
+            // Go straight to app
+            showApp();
+        }
+    } else {
+        // Fallback if server is unreachable: Show login just in case
+        showLogin();
+        updateTextByClass('status-display', 'Connection Error: Check IP');
+    }
+}
+
+// --- View Switching ---
+
+function showLogin() {
+    document.getElementById('app-content').classList.add('hidden');
+    document.getElementById('login-screen').classList.remove('hidden');
+}
+
+function showApp() {
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('app-content').classList.remove('hidden');
+}
+
+// --- Theme Logic ---
+function toggleDarkMode() {
+    isDarkMode = !isDarkMode;
+    localStorage.setItem('pc_power_link_dark', isDarkMode);
+    
+    if (isDarkMode) {
+        document.documentElement.classList.add('dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+    }
+    updateThemeIcon(isDarkMode);
+}
+
+function updateThemeIcon(isDark) {
+    const icon = document.getElementById('dark-mode-icon');
+    if (isDark) {
+        icon.className = 'fas fa-sun text-yellow-400';
+    } else {
+        icon.className = 'fas fa-moon text-gray-600';
+    }
+}
+
+// --- Auth Functions ---
+function attemptLogin() {
+    const pwInput = document.getElementById('login-password');
+    const pw = pwInput.value.trim();
+    const errorEl = document.getElementById('login-error');
+
+    if (!pw) {
+        errorEl.textContent = "Please enter passcode";
+        errorEl.classList.remove('hidden');
+        return;
+    }
+
+    storedPassword = pw;
+    localStorage.setItem('pc_power_link_pw', pw);
+    errorEl.classList.add('hidden');
+    
+    showApp();
+}
+
+function logout() {
+    localStorage.removeItem('pc_power_link_pw');
+    location.reload();
+}
+
+// --- UI Helpers ---
+function updateTextByClass(className, text) {
+    const els = document.querySelectorAll('.' + className);
+    els.forEach(el => el.innerText = text);
+}
+
+// --- API Helper ---
+async function api(endpoint, method = "GET", auth = false) {
+    let headers = { "Content-Type": "application/json" };
+    // Only send header if auth is actually required AND we have a password
+    if (auth && authRequired && storedPassword) {
+        headers["X-Key"] = storedPassword;
+    }
+
+    try {
+        const res = await fetch(endpoint, { method, headers });
+        
+        if (res.status === 401) {
+            return { success: false, status: 401 };
+        }
+        
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        
+        const data = await res.json();
+        return { success: true, data: data };
+        
+    } catch (e) {
+        return { success: false, error: e.message || "Network error" };
+    }
+}
+
+// --- Actions ---
+async function sendAction(action) {
+    updateTextByClass('status-display', `Sending ${action}...`);
+
+    // We pass true for auth, but the api() helper will only attach the header
+    // if authRequired is actually true.
+    const result = await api("/api/power/" + action, "POST", true);
+
+    if (result.success) {
+        updateTextByClass('status-display', `Success: ${action} sent`);
+        if (navigator.vibrate) navigator.vibrate(50);
+    } else if (result.status === 401) {
+        alert("Incorrect Password or Auth Required.");
+        showLogin();
+        // Clear invalid password
+        localStorage.removeItem('pc_power_link_pw');
+        storedPassword = '';
+    } else {
+        updateTextByClass('status-display', 'Failed to send command');
+    }
+}
+
+function confirmShutdown() {
+    if(confirm("Are you sure you want to SHUTDOWN?")) {
+        sendAction('shutdown');
+    }
+}
+</script>
+</body>
+</html>
